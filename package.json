@@ -1,0 +1,33 @@
+{
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts",
+    "seed": "bun run src/db/seed.ts",
+    "upload": "bun run translations/uploader.ts",
+    "start": "bun src/index.ts",
+    "build:tailwind": "npx @tailwindcss/cli -i ./styles/pdf-input.css -o ./public/pdf-output.css",
+    "watch:tailwind": "npx @tailwindcss/cli -i ./styles/pdf-input.css -o ./public/pdf-output.css --watch",
+    "build": "bun run build:tailwind && bun build src/index.ts --outdir dist --target bun",
+    "release": "bun run build:tailwind && bun build --compile --minify --sourcemap src/index.ts --outfile myapp --target bun",
+    "test:template": "bun test-template.ts"
+  },
+  "dependencies": {
+    "@bogeychan/elysia-logger": "^0.1.10",
+    "@elysiajs/cors": "^1.3.3",
+    "@elysiajs/swagger": "^1.3.1",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
+    "elysia": "^1.3.8",
+    "pg": "^8.16.3",
+    "postgres": "^3.4.7",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bun": "^1.2.20",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.4"
+  }
+}
