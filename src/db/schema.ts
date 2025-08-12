@@ -3,12 +3,27 @@ import { relations } from "drizzle-orm";
 import { basedcols } from "./columns.helpers"; // Assuming you have this shared columns definition
 
 // Define todo status enum similar to roles enum in reference schema
-export const todoStatus = pgEnum('todo_status', [
+export const todoStatus = pgEnum('status', [
   'Pending', 
   'InProgress', 
   'Completed', 
   'Archived'
 ]);
+export const todoPriority = pgEnum('todo_priority', [
+  'High',
+  'Medium',
+  'Low',
+]);
+
+export const user = pgTable('users', {
+  ...basedcols, // Reuse your base columns if they include id, createdAt, updatedAt, etc.
+  username: varchar('username', { length: 50 }).notNull().unique(),
+  email: varchar('email', { length: 100 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  role: varchar('role', { length: 20 }).default('user').notNull(),
+  profilePicture: varchar('profile_picture', { length: 255 }),
+  bio: text('bio'),
+});
 
 export const todos = pgTable('todos', {
   ...basedcols, // Reuse your base columns if they include id, createdAt, updatedAt, etc.
@@ -19,37 +34,40 @@ export const todos = pgTable('todos', {
   // Optional fields
   description: text('description'),
   
-  // Status management (similar to user roles)
+  // Status management 
   status: todoStatus('status').default('Pending').notNull(),
   
-  // Completion flag (boolean like isActive in user table)
+  // Completion flag 
   completed: boolean('completed').default(false),
   
-  // Dates (similar to reference schema)
+  // Dates 
   dueDate: timestamp('due_date'),
   completedAt: timestamp('completed_at'),
   
-  // Priority (could also be an enum if needed)
-  priority: integer('priority').default(3), // 1=High, 2=Medium, 3=Low
+  // Priority 
+  priority: todoPriority('priority').default('Low').notNull(),
   
-  // // Relationships (similar to departmentId in user table)
-  // assignedToId: varchar('assigned_to_id', { length: 32 })
-  //   .references(() => user.id),
+  // Relationships
+  assignedToUserId: varchar('assigned_to_user_id', { length: 32 })
+    .references(() => user.id),
   
-  // Category/tag system (similar to donation categories)
+  // Category/tag system
   category: varchar('category', { length: 50 }),
   
-  // Metadata (similar to image_url in user table)
+  // Metadata 
   attachmentUrl: varchar('attachment_url'),
 });
 
-// Define relations if needed (similar to userRelations)
-// export const todoRelations = relations(todos, ({ one }) => ({
-//   assignedTo: one(user, {
-//     fields: [todos.assignedToId],
-//     references: [user.id]
-//   }),
-// }));
+export const userRelations = relations(user, ({ many }) => ({
+  tasks: many(todos),
+}));
+
+export const todoRelations = relations(todos, ({ one }) => ({
+  assignedTo: one(user, {
+    fields: [todos.assignedToUserId],
+    references: [user.id],
+  }),
+}));
 
 // Type inference (keep your existing types)
 export type Todo = typeof todos.$inferSelect;

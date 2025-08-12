@@ -1,0 +1,7 @@
+# Dependency directories
+node_modules/
+drizzle/
+
+# Log files
+logs/
+*.log
