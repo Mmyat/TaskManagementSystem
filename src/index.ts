@@ -1,10 +1,7 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
-import { db } from "./db";
-import { todos, type Todo, type NewTodo } from "./db/schema";
 import { corePlugin } from "./plugins/core";
-import todoRoutes from "./api/todos";
 import taskRoutes from "./api";
 
 const app = new Elysia()
