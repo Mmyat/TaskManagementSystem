@@ -8,7 +8,7 @@ import {
   handleToggleTodoComplete
 } from "./handler";
 
-const todoRoutes = new Elysia({ prefix: "/todo" })
+const todoRoutes = new Elysia({ prefix: "/task" })
   // Public routes
   .get("/", handleListTodos)
   .get("/:id", handleGetTodoById)

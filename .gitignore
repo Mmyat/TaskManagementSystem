@@ -1,6 +1,7 @@
 # Dependency directories
 node_modules/
 drizzle/
+keys/
 
 # Log files
 logs/

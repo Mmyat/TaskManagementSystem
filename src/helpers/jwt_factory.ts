@@ -2,6 +2,7 @@ import { Handler, type Context } from 'elysia';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { error_codes } from '../constants/error_codes';
 import { HandlerResult } from '../types';
+import crypto from 'crypto';
 
 type JwtConfig<T extends JwtPayload> = {
   keyPairs: {
@@ -51,15 +52,28 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
       keyPair = config.keyPairs[0]; // fallback to first key
     }
 
-    const algorithm = keyPair.privateKey === keyPair.publicKey ? 'EC512' : 'PS512';
+    // Determine the correct algorithm based on key type
+    const detectAlgorithm = (privateKey: string): jwt.Algorithm => {
+      const keyObject = crypto.createPrivateKey(privateKey);
 
-    // return jwt.sign(payload, keyPair.privateKey, {
-    //   algorithm,
-    //   ...(keyPair.defaultSignOptions ?? {}),
-    //   ...options,
-    //   // Add kid to header if provided
-    //   ...(keyPair.kid && { header: { kid: keyPair.kid } }),
-    // });
+      if (keyObject.asymmetricKeyType === 'ec') {
+        const curve = keyObject.asymmetricKeyDetails?.namedCurve;
+        console.log('Curve:', curve);
+        
+        switch (curve) {
+          case 'prime256v1': return 'ES256';
+          case 'secp521r1': return 'ES512';
+          default:
+            throw new Error(`Unsupported EC curve: ${curve}`);
+        }
+      }
+
+      throw new Error(`Unsupported key type: ${keyObject.asymmetricKeyType}`);
+    };
+    const algorithm = detectAlgorithm(keyPair.privateKey);
+    console.log(`Using algorithm: ${algorithm}`);
+    
+    // const algorithm = keyPair.privateKey === keyPair.publicKey ? 'ES512' : 'ES256';
 
     const mergedOptions: SignOptions = {
       algorithm,

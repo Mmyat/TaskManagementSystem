@@ -5,9 +5,92 @@ import { AppContext, HandlerResult } from "../../types";
 import { saltRounds } from "../../constants";
 import { error_codes } from "../../constants/error_codes";
 import { parseRole } from "../../db/enum.helpers";
-import { userJwt } from "../../middlewares/jwt_tokens";
-import { log } from "console";
+import { adminJwt } from "../../middlewares/jwt_tokens";
 import { uploadFile } from "../../helpers/uploadFile";
+
+export const handleListUser = async ({db, log, query, set}: AppContext) : Promise<HandlerResult<any[]>> => {
+  try {
+    const users = await db.query.user.findMany({
+      columns: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        profilePicture: true
+      }
+    });
+
+    const userResult = users.map(u => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      profilePicture: u.profilePicture,
+      role: u.role
+    }));
+
+    return {
+      data: userResult
+    };
+  }
+  catch(error) {
+    set.status = 500;
+    return {
+      error: {
+        message: 'Failed to get users',
+        code: error_codes.USER_LISTING_FAILED,
+        details: error instanceof Error ? error.message : String(error)
+      }
+    };
+  }
+}
+
+export const handleListUserByRole = async ({db, log, query, set, params}: AppContext) : Promise<HandlerResult<any[]>> => {
+  try {
+    const { role } = params;
+    const parsedRole = parseRole(role);
+
+    if (!parsedRole) {
+      set.status = 400;
+      return {
+        error: {
+          message: 'Invalid role provided',
+          code: error_codes.INVALID_USER_ROLE
+        }
+      };
+    }
+
+    const users = await db.query.user.findMany({
+      where: eq(user.role, parsedRole),
+      columns: {
+        id: true,
+        username: true,
+        email: true,
+        role: true
+      }
+    });
+
+    const userResult = users.map(u => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role
+    }));
+
+    return {
+      data: userResult
+    };
+  }
+  catch(error) {
+    set.status = 500;
+    return {
+      error: {
+        message: 'Failed to get users',
+        code: error_codes.USER_LISTING_FAILED,
+        details: error instanceof Error ? error.message : String(error)
+      }
+    };
+  }
+}
 
 export const handleUserById = async ({db, log, set, params}: AppContext) : Promise<HandlerResult<any>> => {
   const { id } = params;
@@ -60,111 +143,111 @@ export const handleUserById = async ({db, log, set, params}: AppContext) : Promi
   }
 }
 
-export const handleCreateUser = async ({db, request, set}: AppContext): Promise<HandlerResult<{ id: string }>> => {
-  const formData = await request.formData();
-  const username = formData.get("username") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const role = formData.get("role") as string;
-  const profilePicture = formData.get("profilePicture") as File | null;
-  const bio = formData.get("bio") as string | null;
+// export const handleCreateUser = async ({db, request, set}: AppContext): Promise<HandlerResult<{ id: string }>> => {
+//   const formData = await request.formData();
+//   const username = formData.get("username") as string;
+//   const email = formData.get("email") as string;
+//   const password = formData.get("password") as string;
+//   const role = formData.get("role") as string;
+//   const profilePicture = formData.get("profilePicture") as File | null;
+//   const bio = formData.get("bio") as string | null;
 
-  // Validate required fields
-  if (!username || !email || !password) {
-    set.status = 400;
-    return {
-      error: {
-        message: 'Missing required fields',
-        code: error_codes.MISSING_REQUIRED_FIELDS,
-        details: 'Username, email, and password are required'
-      }
-    };
-  }
+//   // Validate required fields
+//   if (!username || !email || !password) {
+//     set.status = 400;
+//     return {
+//       error: {
+//         message: 'Missing required fields',
+//         code: error_codes.MISSING_REQUIRED_FIELDS,
+//         details: 'Username, email, and password are required'
+//       }
+//     };
+//   }
 
-  // Check if email exists
-  const existingEmail = await db.query.user.findFirst({ 
-    where: eq(user.email, email),
-    columns: { id: true }
-  });
-  if (existingEmail) {
-    set.status = 409;
-    return {
-      error: {
-        message: `Email (${email}) already exists`,
-        code: error_codes.EMAIL_EXISTS
-      }
-    };
-  }
+//   // Check if email exists
+//   const existingEmail = await db.query.user.findFirst({ 
+//     where: eq(user.email, email),
+//     columns: { id: true }
+//   });
+//   if (existingEmail) {
+//     set.status = 409;
+//     return {
+//       error: {
+//         message: `Email (${email}) already exists`,
+//         code: error_codes.EMAIL_EXISTS
+//       }
+//     };
+//   }
 
-  // Validate role
-  const pgRole = parseRole(role);
-  if(!pgRole) {
-    set.status = 400;
-    return {
-      error: {
-        message: 'Invalid role provided',
-        code: error_codes.INVALID_USER_ROLE,
-        details: `Role (${role}) is not valid`
-      }
-    };
-  }
+//   // Validate role
+//   const pgRole = parseRole(role);
+//   if(!pgRole) {
+//     set.status = 400;
+//     return {
+//       error: {
+//         message: 'Invalid role provided',
+//         code: error_codes.INVALID_USER_ROLE,
+//         details: `Role (${role}) is not valid`
+//       }
+//     };
+//   }
   
-  if (role === 'admin') {
-    set.status = 403;
-    return {
-      error: {
-        message: 'Cannot create user with admin role',
-        code: error_codes.UNAUTHORIZED,
-        details: 'Creation of admin users is restricted'
-      }
-    };
-  }
+//   if (role === 'admin') {
+//     set.status = 403;
+//     return {
+//       error: {
+//         message: 'Cannot create user with admin role',
+//         code: error_codes.UNAUTHORIZED,
+//         details: 'Creation of admin users is restricted'
+//       }
+//     };
+//   }
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+//   try {
+//     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    const userData = {
-      username,
-      email,
-      password: hashedPassword,
-      role: pgRole,
-      ...(bio && { bio }),
-      // Profile picture handled separately
-    };
+//     const userData = {
+//       username,
+//       email,
+//       password: hashedPassword,
+//       role: pgRole,
+//       ...(bio && { bio }),
+//       // Profile picture handled separately
+//     };
 
-    const [insertedUser] = await db.insert(user)
-      .values(userData)
-      .returning({ id: user.id });
+//     const [insertedUser] = await db.insert(user)
+//       .values(userData)
+//       .returning({ id: user.id });
 
-    // Handle profile picture upload if present
-    if (profilePicture) {
-      try {
-        const filePath = './public/profile-images';
-        const relativeImagePath = await uploadFile(profilePicture, insertedUser.id,filePath);
-        if (relativeImagePath) {
-          await db.update(user)
-            .set({ profilePicture: relativeImagePath })
-            .where(eq(user.id, insertedUser.id));
-        }
-      } catch (uploadError) {
-        console.error('Profile picture upload failed:', uploadError);
-        // Continue without failing the user creation
-      }
-    }
+//     // Handle profile picture upload if present
+//     if (profilePicture) {
+//       try {
+//         const filePath = './public/profile-images';
+//         const relativeImagePath = await uploadFile(profilePicture, insertedUser.id,filePath);
+//         if (relativeImagePath) {
+//           await db.update(user)
+//             .set({ profilePicture: relativeImagePath })
+//             .where(eq(user.id, insertedUser.id));
+//         }
+//       } catch (uploadError) {
+//         console.error('Profile picture upload failed:', uploadError);
+//         // Continue without failing the user creation
+//       }
+//     }
 
-    return { data: { id: insertedUser.id } };
-  } catch (error) {
-    console.error('Database error:', error);
-    set.status = 500;
-    return {
-      error: {
-        message: 'Failed to create user',
-        code: error_codes.USER_CREATION_FAILED,
-        details: error instanceof Error ? error.message : String(error)
-      }
-    };
-  }
-};
+//     return { data: { id: insertedUser.id } };
+//   } catch (error) {
+//     console.error('Database error:', error);
+//     set.status = 500;
+//     return {
+//       error: {
+//         message: 'Failed to create user',
+//         code: error_codes.USER_CREATION_FAILED,
+//         details: error instanceof Error ? error.message : String(error)
+//       }
+//     };
+//   }
+// };
 
 export const handleUpdateUser = async ({db, set, request}: AppContext) : Promise<HandlerResult<any>> => {
   const formData = await request.formData();
@@ -196,17 +279,10 @@ export const handleUpdateUser = async ({db, set, request}: AppContext) : Promise
     };
 
     if(profilePicture) {
-      try {
-        const filePath = './public/profile-images';
-        const relativeImagePath = await uploadFile(profilePicture, updateData.id,filePath);
-        if (relativeImagePath) {
-          await db.update(user)
-            .set({ profilePicture: relativeImagePath })
-            .where(eq(user.id, updateData.id));
-        }
-      } catch (uploadError) {
-        console.error('Profile picture upload failed:', uploadError);
-        // Continue without failing the user creation
+    //   const updatedImagePath = await uploadFile(profilePicture, id);
+      const updatedImagePath = "developing now!";
+      if(updatedImagePath) {
+        updateData.profilePicture = updatedImagePath;
       }
     }
     
@@ -358,13 +434,13 @@ export const handleLogin = async ({db, body, set}: AppContext & {
                 }
             };
         }
-       
-        const accessToken = userJwt.generateToken({
+        const accessToken = adminJwt.generateToken({
             userId: existingUser.id, 
             role: existingUser.role
-        })
-        const refreshToken = userJwt.generateToken({
-            userId: existingUser.id,
+        });
+        
+        const refreshToken = adminJwt.generateToken({
+            userId: existingUser.id, 
             role: existingUser.role
         }, { expiresIn: '7d' });
         return {
@@ -444,7 +520,7 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
     }
 
     try {
-        const decoded = userJwt.verifyToken(refreshToken);
+        const decoded = adminJwt.verifyToken(refreshToken);
         
         if (decoded === null || (typeof decoded === "object" && "expired" in decoded && decoded.expired)) {
             set.status = 401;
@@ -482,7 +558,7 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
             };
         }
 
-        const newAccessToken = userJwt.generateToken({
+        const newAccessToken = adminJwt.generateToken({
             userId: decoded.userId, 
             role: decoded.role
         });

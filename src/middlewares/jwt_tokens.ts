@@ -23,7 +23,7 @@ export const adminJwt = createElysiaJwt<{ userId: string; role: string }>({
   ]
 });
 
-export const cashierJwt = createElysiaJwt<{ userId: string; role: string }>({
+export const userJwt = createElysiaJwt<{ userId: string; role: string }>({
   keyPairs: [
     {
       privateKey: CASHIER_KEYS.privateKey,
@@ -38,19 +38,12 @@ export const commonJwt = createElysiaJwt({
     { privateKey: ADMIN_KEYS.privateKey, 
       publicKey: ADMIN_KEYS.publicKey, 
       kid: 'admin', 
-      defaultSignOptions : {expiresIn: "1h"} 
+      defaultSignOptions : {expiresIn: "1h",algorithm: 'ES512'} 
     },
     { privateKey: CASHIER_KEYS.privateKey, 
       publicKey: CASHIER_KEYS.publicKey, 
-      kid: 'cashier', 
-      defaultSignOptions : {expiresIn: "1h"} 
+      kid: 'user', 
+      defaultSignOptions : {expiresIn: "1h",algorithm: 'ES256'} 
     },
   ]
 });
-
-// symmetric-jwt.ts
-// export const hs256Jwt = createJwtUtils(
-//   "shared_secret_key", // Use same key for both params
-//   "shared_secret_key",
-//   { algorithm: "HS256" } // Override to HMAC
-// );
