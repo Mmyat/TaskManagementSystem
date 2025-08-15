@@ -9,13 +9,13 @@ import {
   handleUpdateUser, 
   handleUserById
 } from "./handlers";
-import { adminJwt } from "../../middlewares/jwt_tokens";
+import { userJwt } from "../../middlewares/jwt_tokens";
 
 const userRoutes = new Elysia({prefix: "/user"})
   .post("/login", handleLogin)
   .post("/refreshToken", handleRefreshToken)
   .post("/create", handleCreateUser)
-  .onBeforeHandle(adminJwt.createAuthMiddleware())
+  .onBeforeHandle(userJwt.createAuthMiddleware())
   .get("/getUserById/:id", handleUserById)
   .post("/update", handleUpdateUser)
   .post("/delete", handleDeleteUser)

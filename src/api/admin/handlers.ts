@@ -143,112 +143,6 @@ export const handleUserById = async ({db, log, set, params}: AppContext) : Promi
   }
 }
 
-// export const handleCreateUser = async ({db, request, set}: AppContext): Promise<HandlerResult<{ id: string }>> => {
-//   const formData = await request.formData();
-//   const username = formData.get("username") as string;
-//   const email = formData.get("email") as string;
-//   const password = formData.get("password") as string;
-//   const role = formData.get("role") as string;
-//   const profilePicture = formData.get("profilePicture") as File | null;
-//   const bio = formData.get("bio") as string | null;
-
-//   // Validate required fields
-//   if (!username || !email || !password) {
-//     set.status = 400;
-//     return {
-//       error: {
-//         message: 'Missing required fields',
-//         code: error_codes.MISSING_REQUIRED_FIELDS,
-//         details: 'Username, email, and password are required'
-//       }
-//     };
-//   }
-
-//   // Check if email exists
-//   const existingEmail = await db.query.user.findFirst({ 
-//     where: eq(user.email, email),
-//     columns: { id: true }
-//   });
-//   if (existingEmail) {
-//     set.status = 409;
-//     return {
-//       error: {
-//         message: `Email (${email}) already exists`,
-//         code: error_codes.EMAIL_EXISTS
-//       }
-//     };
-//   }
-
-//   // Validate role
-//   const pgRole = parseRole(role);
-//   if(!pgRole) {
-//     set.status = 400;
-//     return {
-//       error: {
-//         message: 'Invalid role provided',
-//         code: error_codes.INVALID_USER_ROLE,
-//         details: `Role (${role}) is not valid`
-//       }
-//     };
-//   }
-  
-//   if (role === 'admin') {
-//     set.status = 403;
-//     return {
-//       error: {
-//         message: 'Cannot create user with admin role',
-//         code: error_codes.UNAUTHORIZED,
-//         details: 'Creation of admin users is restricted'
-//       }
-//     };
-//   }
-
-//   try {
-//     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
-//     const userData = {
-//       username,
-//       email,
-//       password: hashedPassword,
-//       role: pgRole,
-//       ...(bio && { bio }),
-//       // Profile picture handled separately
-//     };
-
-//     const [insertedUser] = await db.insert(user)
-//       .values(userData)
-//       .returning({ id: user.id });
-
-//     // Handle profile picture upload if present
-//     if (profilePicture) {
-//       try {
-//         const filePath = './public/profile-images';
-//         const relativeImagePath = await uploadFile(profilePicture, insertedUser.id,filePath);
-//         if (relativeImagePath) {
-//           await db.update(user)
-//             .set({ profilePicture: relativeImagePath })
-//             .where(eq(user.id, insertedUser.id));
-//         }
-//       } catch (uploadError) {
-//         console.error('Profile picture upload failed:', uploadError);
-//         // Continue without failing the user creation
-//       }
-//     }
-
-//     return { data: { id: insertedUser.id } };
-//   } catch (error) {
-//     console.error('Database error:', error);
-//     set.status = 500;
-//     return {
-//       error: {
-//         message: 'Failed to create user',
-//         code: error_codes.USER_CREATION_FAILED,
-//         details: error instanceof Error ? error.message : String(error)
-//       }
-//     };
-//   }
-// };
-
 export const handleUpdateUser = async ({db, set, request}: AppContext) : Promise<HandlerResult<any>> => {
   const formData = await request.formData();
   const id = formData.get("id") as string;
@@ -413,6 +307,16 @@ export const handleLogin = async ({db, body, set}: AppContext & {
             };
         }
 
+        if (!existingUser.role || existingUser.role !== 'admin') {
+            set.status = 403;
+            return { 
+                error: {
+                    message: "You do not have admin privileges !",
+                    code: error_codes.FORBIDDEN_OPERATION
+                }
+            };
+        }
+
         if (!existingUser.password) {
             set.status = 401;
             return {
@@ -436,12 +340,14 @@ export const handleLogin = async ({db, body, set}: AppContext & {
         }
         const accessToken = adminJwt.generateToken({
             userId: existingUser.id, 
-            role: existingUser.role
+            role: existingUser.role,
+            token_use: "access"
         });
         
         const refreshToken = adminJwt.generateToken({
             userId: existingUser.id, 
-            role: existingUser.role
+            role: existingUser.role,
+            token_use: "refresh"
         }, { expiresIn: '7d' });
         return {
             data: {
@@ -520,8 +426,7 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
     }
 
     try {
-        const decoded = adminJwt.verifyToken(refreshToken);
-        
+        const decoded = adminJwt.verifyToken(refreshToken,"refresh");
         if (decoded === null || (typeof decoded === "object" && "expired" in decoded && decoded.expired)) {
             set.status = 401;
             return {
@@ -560,7 +465,8 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
 
         const newAccessToken = adminJwt.generateToken({
             userId: decoded.userId, 
-            role: decoded.role
+            role: decoded.role,
+            token_use: "access"
         });
 
         return {

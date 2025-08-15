@@ -53,6 +53,10 @@ export const todos = pgTable('todos', {
   assignedToUserId: varchar('assigned_to_user_id', { length: 32 })
     .references(() => user.id),
   
+    // Relationships
+  createdByUserId: varchar('created_by_user_id', { length: 32 })
+    .references(() => user.id),
+
   // Category/tag system
   category: varchar('category', { length: 50 }),
   
@@ -67,6 +71,10 @@ export const userRelations = relations(user, ({ many }) => ({
 export const todoRelations = relations(todos, ({ one }) => ({
   assignedTo: one(user, {
     fields: [todos.assignedToUserId],
+    references: [user.id],
+  }),
+  createdBy: one(user, {
+    fields: [todos.createdByUserId],
     references: [user.id],
   }),
 }));

@@ -24,6 +24,11 @@
             "date": 1755141799465,
             "name": "logs\\rejections-2025-08-14.log",
             "hash": "1a53616ebf93ec8769a4f9f65a2e20df8748817a4c306bcdb8bccd842c9bd536"
+        },
+        {
+            "date": 1755228061813,
+            "name": "logs\\rejections-2025-08-15.log",
+            "hash": "9a645a632a5e280482e08ed946c2f22e2fa5bd90ab8150f57965c0707df19e7c"
         }
     ],
     "hashType": "sha256"

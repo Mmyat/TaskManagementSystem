@@ -1,10 +1,11 @@
 import { Elysia } from "elysia";
-import todoRoutes from "./todos";
 import userRoutes from "./user";
 import adminRoutes from "./admin";
+import { adminTaskRoutes, userTaskRoutes } from "./tasks";
 
-const taskRoutes = new Elysia({prefix: "/task-manager"})
+const apiRoutes = new Elysia({prefix: "/task-manager"})
 .use(adminRoutes)
 .use(userRoutes)
-.use(todoRoutes); 
-export default taskRoutes;
+.use(userTaskRoutes) 
+.use(adminTaskRoutes);
+export default apiRoutes;

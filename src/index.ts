@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { corePlugin } from "./plugins/core";
-import taskRoutes from "./api";
+import apiRoutes from "./api";
 
 const app = new Elysia()
   .use(cors())
@@ -23,7 +23,7 @@ const app = new Elysia()
     log.info('🌱 Health check');
     return 'Hello Lotus CoreAPI';
   })
-  .use(taskRoutes)
+  .use(apiRoutes)
   .listen(3000);
 
 console.log(

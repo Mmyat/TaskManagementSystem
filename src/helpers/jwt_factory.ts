@@ -16,7 +16,7 @@ type JwtConfig<T extends JwtPayload> = {
 
 type JwtElysiaPackage<T extends JwtPayload> = {
   generateToken: (payload: T, options?: SignOptions & { kid?: string | number }) => string;
-  verifyToken: (token: string) => (T & { exp?: number }) | { expired: true } | null;
+  verifyToken: (token: string,expectedType?: "access" | "refresh") => (T & { exp?: number }) | { expired: true } | null;
   middleware: (config?: { attachToContext?: boolean }) => (ctx: Context) => Promise<void> | void;
   createAuthMiddleware: (config?: { attachToContext?: boolean }) => Handler;
 };
@@ -55,11 +55,8 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
     // Determine the correct algorithm based on key type
     const detectAlgorithm = (privateKey: string): jwt.Algorithm => {
       const keyObject = crypto.createPrivateKey(privateKey);
-
       if (keyObject.asymmetricKeyType === 'ec') {
-        const curve = keyObject.asymmetricKeyDetails?.namedCurve;
-        console.log('Curve:', curve);
-        
+        const curve = keyObject.asymmetricKeyDetails?.namedCurve;        
         switch (curve) {
           case 'prime256v1': return 'ES256';
           case 'secp521r1': return 'ES512';
@@ -67,14 +64,10 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
             throw new Error(`Unsupported EC curve: ${curve}`);
         }
       }
-
       throw new Error(`Unsupported key type: ${keyObject.asymmetricKeyType}`);
     };
-    const algorithm = detectAlgorithm(keyPair.privateKey);
-    console.log(`Using algorithm: ${algorithm}`);
+    const algorithm = detectAlgorithm(keyPair.privateKey);    
     
-    // const algorithm = keyPair.privateKey === keyPair.publicKey ? 'ES512' : 'ES256';
-
     const mergedOptions: SignOptions = {
       algorithm,
       ...(keyPair.defaultSignOptions ?? {}),
@@ -94,18 +87,24 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
 
   // Try to verify with all public keys, return on first success
   const verifyToken = (
-    token: string
-  ): (T & { exp?: number }) | { expired: true } | null => {
-    for (const keyPair of config.keyPairs) {
-      try {
-        return jwt.verify(token, keyPair.publicKey) as T & { exp?: number };
-      } catch (err: any) {
-        if (err.name === 'TokenExpiredError') return { expired: true };
-        // If "invalid signature" or other, try next key
+  token: string,
+  expectedType?: "access" | "refresh"
+): (T & { exp?: number }) | { expired: true } | null => {
+  for (const keyPair of config.keyPairs) {
+    try {
+      const decoded = jwt.verify(token, keyPair.publicKey) as T & { exp?: number };
+      
+      if (expectedType && decoded.token_use !== expectedType) {
+        return null; // wrong token type
       }
+      return decoded;
+    } catch (err: any) {
+      if (err.name === 'TokenExpiredError') return { expired: true };
     }
-    return null;
-  };
+  }
+  return null;
+};
+
 
   // Elysia-specific middleware
   const middleware = ({ attachToContext = true } = {}) =>
@@ -118,7 +117,7 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
         throw new Error('Missing token');
       }
 
-      const result = verifyToken(authHeader.split(' ')[1]);
+      const result = verifyToken(authHeader.split(' ')[1],"access");
 
       if (!result || 'expired' in result) {
         set.status = 401;
@@ -172,7 +171,8 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
         );
       }
 
-      const result = verifyToken(token);
+      const result = verifyToken(token,"access");
+      
       if (!result || 'expired' in result) {
         set.status = 401;
         if (result?.expired) {
@@ -192,9 +192,15 @@ export function createElysiaJwt<T extends JwtPayload = JwtPayload>(
         }
       }
 
+      if (result.token_use !== "access") { // 👈 Validate token type
+        return errorResponse(
+          'Invalid token type',
+          error_codes.INVALID_TOKEN_PAYLOAD,
+          'Access token required'
+        );
+      }
       if (attachToContext) {
         store.jwt = result;
-        // headers['x-user'] = JSON.stringify(result);
       }
     };
   };

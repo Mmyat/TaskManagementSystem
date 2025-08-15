@@ -347,8 +347,7 @@ export const handleLogin = async ({db, body, set}: AppContext & {
             };
         }
 
-        const passwordMatch = await bcrypt.compare(password, existingUser.password);
-        
+        const passwordMatch = await bcrypt.compare(password, existingUser.password);        
         if (!passwordMatch) {
             set.status = 401;
             return { 
@@ -361,11 +360,13 @@ export const handleLogin = async ({db, body, set}: AppContext & {
        
         const accessToken = userJwt.generateToken({
             userId: existingUser.id, 
-            role: existingUser.role
+            role: existingUser.role,
+            token_use: "access"
         })
         const refreshToken = userJwt.generateToken({
             userId: existingUser.id,
-            role: existingUser.role
+            role: existingUser.role,
+            token_use: "refresh"
         }, { expiresIn: '7d' });
         return {
             data: {
@@ -444,7 +445,7 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
     }
 
     try {
-        const decoded = userJwt.verifyToken(refreshToken);
+        const decoded = userJwt.verifyToken(refreshToken,"refresh");
         
         if (decoded === null || (typeof decoded === "object" && "expired" in decoded && decoded.expired)) {
             set.status = 401;
@@ -484,7 +485,8 @@ export const handleRefreshToken = async ({db, body, set}: AppContext & {
 
         const newAccessToken = userJwt.generateToken({
             userId: decoded.userId, 
-            role: decoded.role
+            role: decoded.role,
+            token_use: "access"
         });
 
         return {

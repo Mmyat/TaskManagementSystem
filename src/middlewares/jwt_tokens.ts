@@ -13,22 +13,24 @@ const CASHIER_KEYS = {
   publicKey: fs.readFileSync("./keys/user_public_key.pem", "utf8"),
 };
 
-export const adminJwt = createElysiaJwt<{ userId: string; role: string }>({
+export const adminJwt = createElysiaJwt<{ userId: string; role: string ;token_use: string}>({
   keyPairs: [
     {
       privateKey: ADMIN_KEYS.privateKey,
       publicKey: ADMIN_KEYS.publicKey,
       defaultSignOptions: { expiresIn: "1h" },
+      kid: 'admin',
     }
   ]
 });
 
-export const userJwt = createElysiaJwt<{ userId: string; role: string }>({
+export const userJwt = createElysiaJwt<{ userId: string; role: string;token_use: string }>({
   keyPairs: [
     {
       privateKey: CASHIER_KEYS.privateKey,
       publicKey: CASHIER_KEYS.publicKey,
       defaultSignOptions: { expiresIn: "1h" },
+      kid: 'user', 
     }
   ]
 });
